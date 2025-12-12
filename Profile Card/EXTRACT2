@@ -1,0 +1,270 @@
+#!/usr/bin/env python3
+"""
+pptx_to_markdown_sequential.py
+Extracts slides text, tables, images, charts, and embedded files from a PPTX
+and generates a Markdown file with proper sequential order.
+"""
+
+import os
+import sys
+import zipfile
+import shutil
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+# --- Helper functions ---
+def ensure_outdir(path):
+    os.makedirs(path, exist_ok=True)
+
+def save_file_bytes(outdir, name, data_bytes):
+    path = os.path.join(outdir, name)
+    with open(path, "wb") as f:
+        f.write(data_bytes)
+    return path
+
+def extract_text_by_heading(prs, heading_font_threshold=18, y_threshold=20):
+    """
+    Extract headings and paragraphs below them sequentially:
+    - heading_font_threshold: minimum font size to consider a shape as heading
+    - y_threshold: max vertical gap to consider a shape part of the heading block
+    """
+    slides_output = []
+
+    for i, slide in enumerate(prs.slides, start=1):
+        slide_text = []
+        shapes_with_text = [s for s in slide.shapes if s.has_text_frame]
+
+        # sort by top
+        shapes_with_text.sort(key=lambda s: s.top)
+
+        visited = set()
+
+        for idx, shape in enumerate(shapes_with_text):
+            if idx in visited:
+                continue
+
+            # check if this shape is a heading
+            heading_text = ""
+            max_font = 0
+            for para in shape.text_frame.paragraphs:
+                for run in para.runs:
+                    if run.font and run.font.size:
+                        font_size = run.font.size.pt
+                        if font_size > max_font:
+                            max_font = font_size
+
+            if max_font >= heading_font_threshold:
+                # Treat as heading
+                heading_text = shape.text_frame.text.strip()
+                if heading_text:
+                    slide_text.append(f"### {heading_text}")  # Markdown heading
+
+                # Now, collect paragraphs below this heading
+                for j in range(idx + 1, len(shapes_with_text)):
+                    next_shape = shapes_with_text[j]
+                    # vertical gap
+                    if 0 < next_shape.top - shape.top <= y_threshold:
+                        for para in next_shape.text_frame.paragraphs:
+                            line = para.text.strip()
+                            if line:
+                                slide_text.append(f"- {line}")
+                        visited.add(j)
+                    else:
+                        break  # too far, stop collecting
+            else:
+                # normal text not heading and not yet visited
+                for para in shape.text_frame.paragraphs:
+                    line = para.text.strip()
+                    if line:
+                        slide_text.append(f"- {line}")
+
+        slides_output.append({
+            "slide_index": i,
+            "texts": slide_text
+        })
+
+    return slides_output
+
+
+# --- Table Extraction ---
+def extract_tables(prs):
+    slides_tables = []
+
+    for i, slide in enumerate(prs.slides, start=1):
+        slide_tables = []
+        for shape in slide.shapes:
+            if shape.shape_type == MSO_SHAPE_TYPE.TABLE:
+                tbl = shape.table
+                table_data = []
+                for r in range(len(tbl.rows)):
+                    row = []
+                    for c in range(len(tbl.columns)):
+                        row.append(tbl.cell(r, c).text.strip())
+                    table_data.append(row)
+                slide_tables.append(table_data)
+        slides_tables.append({
+            "slide_index": i,
+            "tables": slide_tables
+        })
+    return slides_tables
+
+# --- Image Extraction ---
+def extract_images(prs, outdir):
+    images = []
+    counter = 1
+    images_dir = os.path.join(outdir, "images")
+    ensure_outdir(images_dir)
+
+    for i, slide in enumerate(prs.slides, start=1):
+        for shape in slide.shapes:
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                img = shape.image
+                ext = img.ext
+                name = f"images/slide_{i}_image_{counter}.{ext}"
+                save_file_bytes(outdir, name, img.blob)
+                images.append((i, name))
+                counter += 1
+    return images
+
+# --- Chart Extraction ---
+def extract_charts(prs):
+    charts = []
+    chart_counter = 1
+
+    for i, slide in enumerate(prs.slides, start=1):
+        for shape in slide.shapes:
+            try:
+                chart = shape.chart
+            except Exception:
+                continue
+
+            series_list = []
+            categories = None
+
+            # Try getting categories
+            try:
+                if hasattr(chart, "category_axis") and chart.category_axis.categories:
+                    categories = [c.label for c in chart.category_axis.categories]
+            except Exception:
+                pass
+
+            try:
+                if categories is None and chart.plots and chart.plots[0].categories:
+                    categories = [c.label for c in chart.plots[0].categories]
+            except Exception:
+                pass
+
+            # Extract series
+            try:
+                for s in chart.series:
+                    series_list.append({"name": s.name, "values": list(s.values)})
+            except Exception as e:
+                series_list.append({"error": str(e)})
+
+            charts.append({
+                "slide_index": i,
+                "chart_index": chart_counter,
+                "categories": categories,
+                "series": series_list
+            })
+
+            chart_counter += 1
+
+    return charts
+
+# --- Embedded Files ---
+def extract_embedded_files(pptx_path, outdir):
+    emb_files = []
+    with zipfile.ZipFile(pptx_path, 'r') as z:
+        for zi in z.infolist():
+            if zi.filename.startswith("ppt/embeddings/"):
+                name = os.path.basename(zi.filename)
+                out = os.path.join(outdir, name)
+                with z.open(zi) as src, open(out, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                emb_files.append(name)
+    return emb_files
+
+# --- Markdown Writing ---
+def write_markdown(outdir, pptx_name, slides_texts, slides_tables, images, charts, embedded):
+    md_path = os.path.join(outdir, "extracted_output.md")
+    ensure_outdir(os.path.join(outdir, "images"))
+
+    with open(md_path, "w", encoding="utf-8") as md:
+        md.write(f"# Extracted Content from `{pptx_name}`\n\n")
+        md.write(f"Total Slides: **{len(slides_texts)}**\n\n---\n")
+
+        for slide_text, slide_table in zip(slides_texts, slides_tables):
+            idx = slide_text["slide_index"]
+            md.write(f"## Slide {idx}\n\n")
+
+            # Text
+            if slide_text["texts"]:
+                md.write("### Text Content\n")
+                for t in slide_text["texts"]:
+                    md.write(f"- {t}\n")
+                md.write("\n")
+
+            # Tables
+            if slide_table["tables"]:
+                for t_idx, table in enumerate(slide_table["tables"], start=1):
+                    md.write(f"### Table {t_idx}\n")
+                    md.write("| " + " | ".join(table[0]) + " |\n")
+                    md.write("|" + " --- |" * len(table[0]) + "\n")
+                    for row in table[1:]:
+                        md.write("| " + " | ".join(row) + " |\n")
+                    md.write("\n")
+
+            # Images
+            slide_imgs = [img for s, img in images if s == idx]
+            if slide_imgs:
+                md.write("### Images\n")
+                for img in slide_imgs:
+                    md.write(f"![Slide {idx} Image]({img})\n")
+                md.write("\n")
+
+            # Charts
+            slide_charts = [c for c in charts if c["slide_index"] == idx]
+            for c in slide_charts:
+                md.write(f"### Chart {c['chart_index']}\n")
+                md.write(f"- **Categories:** {c['categories']}\n")
+                md.write("- **Series:**\n")
+                for s in c["series"]:
+                    md.write(f"  - {s}\n")
+                md.write("\n")
+
+            md.write("---\n")
+
+        # Embedded files
+        if embedded:
+            md.write("## Embedded Files\n")
+            for f in embedded:
+                md.write(f"- {f}\n")
+
+    return md_path
+
+# --- Main ---
+def main(pptx_path, outdir):
+    ensure_outdir(outdir)
+    images_dir = os.path.join(outdir, "images")
+    ensure_outdir(images_dir)
+
+    prs = Presentation(pptx_path)
+
+    slides_texts = extract_text_by_heading(prs)
+    slides_tables = extract_tables(prs)
+    images = extract_images(prs, outdir)
+    charts = extract_charts(prs)
+    embedded = extract_embedded_files(pptx_path, outdir)
+
+    md_path = write_markdown(outdir, os.path.basename(pptx_path),
+                             slides_texts, slides_tables, images, charts, embedded)
+
+    print("Markdown file created:", md_path)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python pptx_to_markdown_sequential.py test1.pptx output_folder")
+        sys.exit(1)
+
+    main(sys.argv[1], sys.argv[2])
