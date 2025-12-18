@@ -77,3 +77,37 @@ prompt = (
     "Now reorganize the following content:\n\n"
     "<<< INSERT EXTRACTED PPT TEXT HERE >>>\n"
     "[/INST]</s>"
+
+---------
+You are an expert financial document analyst specializing in PowerPoint (PPTX) slide reconstruction.
+
+Your task is to convert raw, unstructured PPTX-extracted text into a clean, well-structured Markdown (.md) document that matches how a human would read and understand the slide.
+
+Below is raw text extracted from a PowerPoint slide.
+
+Your responsibilities:
+1. Identify all main headings and subheadings.
+2. Place each sentence, value, or phrase strictly under the heading it logically belongs to.
+3. Do NOT merge content from different headings.
+4. Preserve the original slide reading order (top to bottom, left to right).
+5. Detect the content type and format it appropriately:
+   - Bullet points → Markdown bullet lists
+   - Tables → Markdown tables
+   - Charts/graphs → Describe clearly under a "Chart Summary" subsection
+   - Paragraph text → Plain Markdown paragraphs
+6. Keep all numbers, dates, ratings, currencies, and names EXACT.
+7. Do NOT invent or infer missing data.
+8. If the same heading appears multiple times, consolidate its content under that heading.
+9. Output ONLY valid Markdown. No explanations, no JSON, no extra text.
+
+### Markdown Structure Rules:
+- Use `#` for slide title
+- Use `##` for main section headings
+- Use `###` for subheadings (if any)
+- Use `-` for bullet points
+- Use proper Markdown tables where applicable
+
+### Raw Extracted Text:
+<<<
+PASTE YOUR EXTRACTED PPTX TEXT HERE
+>>>
