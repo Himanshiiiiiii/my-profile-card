@@ -1,0 +1,23 @@
+prompt = """
+You are given extracted content from a PPT file.
+
+Your task is to reorganize the content in a strictly sequential and human-readable manner.
+
+Instructions:
+- Detect the actual headings exactly as they appear in the content.
+- Display each heading as-is (do not rename, number, or label them).
+- Immediately place only the data that belongs to that heading directly below it.
+- Do not merge multiple headings.
+- Do not mix or move content between headings.
+- Preserve the original order of appearance.
+- Bullet points, paragraphs, tables, charts, and figures must appear exactly as extracted.
+- Tables must remain in their original structure and formatting.
+- If charts or graphs are present, include their descriptions exactly where they appear under the correct heading.
+- Do not add, remove, summarize, or infer any content.
+
+Output format:
+- Use Markdown.
+- Headings should be rendered as Markdown headings.
+- All other content should appear exactly as provided, only reordered sequentially.
+
+Now process the following content
