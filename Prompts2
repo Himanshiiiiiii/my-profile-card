@@ -21,3 +21,30 @@ Output format:
 - All other content should appear exactly as provided, only reordered sequentially.
 
 Now process the following content
+
+----------------
+prompt = """
+You are given extracted content from a PPT file. The content may be scattered, out of order, or separated from the heading it logically belongs to.
+
+Your task is to reorganize the content so that each heading is followed by all and only the data that logically belongs to it.
+
+Instructions:
+- Identify the actual headings exactly as they appear in the content.
+- Display each heading as-is, without renaming, numbering, or modifying it.
+- For each heading, gather all related content even if it appears elsewhere in the extracted text.
+- Determine relationship based on semantic meaning, not proximity alone.
+- Do not mix content between different headings.
+- Do not merge multiple headings.
+- Preserve the original text of bullet points, paragraphs, tables, and figures.
+- Tables must appear exactly as extracted, without restructuring or summarization.
+- Charts and graphs should be placed under the heading they describe.
+- If the same data fragment clearly belongs to only one heading, place it there even if it was extracted earlier or later.
+- Do not invent, infer, summarize, or omit any content.
+
+Output format:
+- Use Markdown.
+- Render headings as Markdown headings using their original text.
+- Place all corresponding content immediately under its heading.
+- Do not include commentary, explanations, or labels.
+
+Now reorganize the following content accordingly
