@@ -1,1 +1,67 @@
-I joined the organization in August 2025, and since the main project was initiated in December 2025, this period was primarily focused on onboarding, understanding the problem domain, and skill development. During this time, I worked on exploratory tasks related to the project, including extracting and structuring data from PPT files using Python libraries such as python-pptx and docling. I also experimented with different prompt strategies and integrated the extracted data with language models to improve output accuracy and coherence. This phase helped me build a strong foundation, and I am now well-prepared to take on more substantial responsibilities and contribute more actively going forward.
+import requests
+import json
+
+url = "http://mistral-uat.apps.useast30.bofa.com/v2/models/mistralai/Mistral-7B-Instruct-v0.3/generate"
+
+prompt = """
+You are given extracted content from a PPT file.
+
+Your task is to restructure the content in a strictly sequential and human-readable format.
+
+Rules:
+1. Identify the first heading.
+2. Place ONLY the text, bullet points, tables, or chart descriptions that belong to that heading directly under it.
+3. Do NOT merge or club multiple headings together.
+4. Do NOT mix content from different headings.
+5. When a new heading appears, stop the previous section and start a new one.
+6. Preserve the original order as it appears on the slide.
+7. If charts or graphs exist, describe them under the correct heading.
+
+Output format (Markdown):
+
+## Heading 1
+- corresponding bullet point
+- corresponding bullet point
+(chart/graph description if any)
+
+## Heading 2
+- corresponding bullet point
+- corresponding bullet point
+
+Now restructure the following content accordingly:
+
+<<< INSERT EXTRACTED PPT TEXT HERE >>>
+"""
+
+payload = {
+    "text_input": prompt,
+    "parameters": {
+        "stream": False,
+        "max_tokens": 2048,
+        "temperature": 0.2,
+        "seed": 42
+    }
+}
+
+headers = {
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+print("Status Code:", response.status_code)
+
+if response.status_code == 200:
+    response_json = response.json()
+
+    # 🔹 Adjust key if your API returns text differently
+    output_text = response_json.get("generated_text", "")
+
+    # Save to Markdown file
+    output_file = "structured_output.md"
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(output_text)
+
+    print(f"✅ Output successfully saved as {output_file}")
+else:
+    print("❌ Error:", response.text)
