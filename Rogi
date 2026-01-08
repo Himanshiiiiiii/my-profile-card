@@ -11,3 +11,18 @@ Their architecture is model-agnostic, meaning they can switch between or combine
 Rogo
 📌 Summary
 So while Rogo doesn’t rely on a single proprietary LLM from scratch, its AI platform leverages top-tier models such as GPT-5 and Gemini 3 Pro, enhanced and fine-tuned for enterprise finance applications.
+
+
+
+-----
+
+Workflow Automation and Output Generation
+Rogo does more than generate text — it automates real financial workflows:
+Prompt library & Quick Actions: Predefined, validated prompts automate common tasks (e.g., comps, memos, briefs). �
+Rogo
+Integrations with PowerPoint, Excel, Word: Outputs are returned in native formats, not just text blocks. �
+Sacra
+It can parse and edit complex spreadsheet models, explain assumptions, or update comps directly in Excel. �
+Sacra
+These workflows combine LLM reasoning + structured data interpretation + output templating.
+Technically, this likely involves orchestration layers and task agents that break down prompts into multi-step processes (e.g., extract → analyze → format).
