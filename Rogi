@@ -26,3 +26,14 @@ It can parse and edit complex spreadsheet models, explain assumptions, or update
 Sacra
 These workflows combine LLM reasoning + structured data interpretation + output templating.
 Technically, this likely involves orchestration layers and task agents that break down prompts into multi-step processes (e.g., extract → analyze → format).
+
+
+-----
+Integrated Data Ingestion & Management
+Instead of just answering prompts, Rogo connects deeply with structured and unstructured financial data:
+Connects to internal firm data (deal rooms, internal reports, databases) as well as external licensed feeds from providers like LSEG, FactSet, PitchBook, Dow Jones, and others. �
+Rogo
+Supports SEC filings, earnings transcripts, investor presentations, news, international filings, and more. �
+Rogo
+Data is indexed and stored so that the models retrieve accurate, auditable information with source citations.
+Under the hood, this likely uses techniques such as RAG (Retrieval-Augmented Generation) — where data is vectorized into embeddings and stored in databases to be searched at runtime.
