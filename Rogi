@@ -1,0 +1,13 @@
+Rogo.ai uses large language models (LLMs) from major AI providers and custom-trained models in its platform, tailored specifically for financial workflows:
+🔹 Core Models Integrated
+OpenAI’s GPT-5 — Rogo announced that GPT-5 is integrated into its response engine and improves answer quality across complex financial reasoning tasks. �
+Rogo
+Google DeepMind’s Gemini 3 Pro — Rogo also supports the Gemini 3 Pro model, which is designed for advanced reasoning and multimodal capabilities. �
+Rogo
+🔹 Customization for Finance
+Fine-tuned and custom models: In addition to these base LLMs, Rogo fine-tunes models on professionally labeled financial data to enhance precision for use cases like valuation analysis, pitch deck generation, and financial research. �
+PR Newswire
+Their architecture is model-agnostic, meaning they can switch between or combine different underlying LLMs depending on the task and performance requirements. �
+Rogo
+📌 Summary
+So while Rogo doesn’t rely on a single proprietary LLM from scratch, its AI platform leverages top-tier models such as GPT-5 and Gemini 3 Pro, enhanced and fine-tuned for enterprise finance applications.
