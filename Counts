@@ -1,0 +1,65 @@
+import os
+from pptx import Presentation
+
+# -------- CONFIG --------
+PPTX_DIR = r"C:\Users\ZKV0J97\OneDrive - Bank of America\Desktop\PPTs"
+OUTPUT_MD = "pptx_chart_features.md"
+# ------------------------
+
+def extract_chart_features(pptx_path):
+    prs = Presentation(pptx_path)
+
+    slide_chart_counts = []
+    total_charts = 0
+
+    for slide_idx, slide in enumerate(prs.slides, start=1):
+        chart_count = 0
+
+        for shape in slide.shapes:
+            if shape.has_chart:
+                chart_count += 1
+
+        total_charts += chart_count
+
+        slide_chart_counts.append({
+            "slide": slide_idx,
+            "charts": chart_count
+        })
+
+    return slide_chart_counts, total_charts
+
+
+def main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, OUTPUT_MD)
+
+    pptx_files = sorted(
+        f for f in os.listdir(PPTX_DIR) if f.lower().endswith(".pptx")
+    )
+
+    with open(output_path, "w", encoding="utf-8") as md:
+        md.write("# PPTX Chart Feature Extraction\n\n")
+
+        for idx, pptx_file in enumerate(pptx_files, start=1):
+            pptx_path = os.path.join(PPTX_DIR, pptx_file)
+
+            slide_counts, total_charts = extract_chart_features(pptx_path)
+
+            md.write(f"## {idx}. {pptx_file}\n\n")
+            md.write(f"- **Total Slides:** {len(slide_counts)}\n")
+            md.write(f"- **Total Charts:** {total_charts}\n\n")
+
+            md.write("| Slide No | Chart Count |\n")
+            md.write("|----------|-------------|\n")
+
+            for s in slide_counts:
+                md.write(f"| {s['slide']} | {s['charts']} |\n")
+
+            md.write("\n---\n\n")
+
+    print("Chart extraction completed successfully.")
+    print(f"Markdown file saved at:\n{output_path}")
+
+
+if __name__ == "__main__":
+    main()
