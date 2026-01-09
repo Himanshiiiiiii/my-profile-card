@@ -1,39 +1,99 @@
-Rogo.ai uses large language models (LLMs) from major AI providers and custom-trained models in its platform, tailored specifically for financial workflows:
-🔹 Core Models Integrated
-OpenAI’s GPT-5 — Rogo announced that GPT-5 is integrated into its response engine and improves answer quality across complex financial reasoning tasks. �
-Rogo
-Google DeepMind’s Gemini 3 Pro — Rogo also supports the Gemini 3 Pro model, which is designed for advanced reasoning and multimodal capabilities. �
-Rogo
-🔹 Customization for Finance
-Fine-tuned and custom models: In addition to these base LLMs, Rogo fine-tunes models on professionally labeled financial data to enhance precision for use cases like valuation analysis, pitch deck generation, and financial research. �
-PR Newswire
-Their architecture is model-agnostic, meaning they can switch between or combine different underlying LLMs depending on the task and performance requirements. �
-Rogo
-📌 Summary
-So while Rogo doesn’t rely on a single proprietary LLM from scratch, its AI platform leverages top-tier models such as GPT-5 and Gemini 3 Pro, enhanced and fine-tuned for enterprise finance applications.
+import os
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+# -------- CONFIG --------
+PPTX_FOLDER = r"\Users\ZKV0J97\OneDrive - Bank of America\Desktop\PPTs"
+OUTPUT_MD = "pptx_feature_report.md"
+# ------------------------
 
 
+def extract_features_from_pptx(pptx_path):
+    prs = Presentation(pptx_path)
 
------
+    features = {
+        "slides": len(prs.slides),
+        "total_images": 0,
+        "total_tables": 0,
+        "total_charts": 0,
+        "per_slide": []
+    }
 
-Workflow Automation and Output Generation
-Rogo does more than generate text — it automates real financial workflows:
-Prompt library & Quick Actions: Predefined, validated prompts automate common tasks (e.g., comps, memos, briefs). �
-Rogo
-Integrations with PowerPoint, Excel, Word: Outputs are returned in native formats, not just text blocks. �
-Sacra
-It can parse and edit complex spreadsheet models, explain assumptions, or update comps directly in Excel. �
-Sacra
-These workflows combine LLM reasoning + structured data interpretation + output templating.
-Technically, this likely involves orchestration layers and task agents that break down prompts into multi-step processes (e.g., extract → analyze → format).
+    for slide_index, slide in enumerate(prs.slides, start=1):
+        slide_data = {
+            "slide_number": slide_index,
+            "images": 0,
+            "tables": 0,
+            "charts": 0,
+            "total_objects": 0
+        }
+
+        for shape in slide.shapes:
+            slide_data["total_objects"] += 1
+
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                slide_data["images"] += 1
+                features["total_images"] += 1
+
+            elif shape.has_table:
+                slide_data["tables"] += 1
+                features["total_tables"] += 1
+
+            elif shape.has_chart:
+                slide_data["charts"] += 1
+                features["total_charts"] += 1
+
+        features["per_slide"].append(slide_data)
+
+    return features
 
 
------
-Integrated Data Ingestion & Management
-Instead of just answering prompts, Rogo connects deeply with structured and unstructured financial data:
-Connects to internal firm data (deal rooms, internal reports, databases) as well as external licensed feeds from providers like LSEG, FactSet, PitchBook, Dow Jones, and others. �
-Rogo
-Supports SEC filings, earnings transcripts, investor presentations, news, international filings, and more. �
-Rogo
-Data is indexed and stored so that the models retrieve accurate, auditable information with source citations.
-Under the hood, this likely uses techniques such as RAG (Retrieval-Augmented Generation) — where data is vectorized into embeddings and stored in databases to be searched at runtime.
+def generate_markdown_report(results, output_path):
+    with open(output_path, "w", encoding="utf-8") as md:
+        md.write("# PPTX Feature Extraction Report\n\n")
+
+        for pptx_name, data in results.items():
+            md.write(f"## 📄 {pptx_name}\n\n")
+            md.write(f"- **Number of Slides:** {data['slides']}\n")
+            md.write(f"- **Total Images:** {data['total_images']}\n")
+            md.write(f"- **Total Tables:** {data['total_tables']}\n")
+            md.write(f"- **Total Charts:** {data['total_charts']}\n\n")
+
+            md.write("### Per-Slide Feature Counts\n\n")
+            md.write("| Slide | Images | Tables | Charts | Total Objects |\n")
+            md.write("|------|--------|--------|--------|---------------|\n")
+
+            for slide in data["per_slide"]:
+                md.write(
+                    f"| {slide['slide_number']} | "
+                    f"{slide['images']} | "
+                    f"{slide['tables']} | "
+                    f"{slide['charts']} | "
+                    f"{slide['total_objects']} |\n"
+                )
+
+            md.write("\n---\n\n")
+
+
+def main():
+    results = {}
+
+    for file in os.listdir(PPTX_FOLDER):
+        if file.lower().endswith(".pptx"):
+            pptx_path = os.path.join(PPTX_FOLDER, file)
+            print(f"Processing: {file}")
+
+            features = extract_features_from_pptx(pptx_path)
+            results[file] = features
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, OUTPUT_MD)
+
+    generate_markdown_report(results, output_path)
+
+    print("\n✅ Feature extraction completed.")
+    print(f"📄 Markdown report saved at: {output_path}")
+
+
+if __name__ == "__main__":
+    main()
