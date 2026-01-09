@@ -26,6 +26,9 @@ def extract_chart_features(pptx_path):
             "charts": chart_count
         })
 
+
+
+
     return slide_chart_counts, total_charts
 
 
@@ -58,6 +61,128 @@ def main():
             md.write("\n---\n\n")
 
     print("Chart extraction completed successfully.")
+    print(f"Markdown file saved at:\n{output_path}")
+
+
+if __name__ == "__main__":
+    main()
+
+
+------
+for all features
+
+import os
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+# -------- CONFIG --------
+PPTX_DIR = r"C:\Users\ZKV0J97\OneDrive - Bank of America\Desktop\PPTs"
+OUTPUT_MD = "pptx_object_features.md"
+# ------------------------
+
+def chart_has_labels(chart):
+    """
+    Returns True if chart has any data labels enabled
+    """
+    for plot in chart.plots:
+        if plot.has_data_labels:
+            return True
+    return False
+
+
+def extract_object_features(pptx_path):
+    prs = Presentation(pptx_path)
+
+    slide_features = []
+    totals = {
+        "objects": 0,
+        "images": 0,
+        "tables": 0,
+        "textboxes": 0,
+        "charts_with_labels": 0,
+        "charts_without_labels": 0
+    }
+
+    for slide_idx, slide in enumerate(prs.slides, start=1):
+        slide_counts = {
+            "slide": slide_idx,
+            "objects": 0,
+            "images": 0,
+            "tables": 0,
+            "textboxes": 0,
+            "charts_with_labels": 0,
+            "charts_without_labels": 0
+        }
+
+        for shape in slide.shapes:
+            slide_counts["objects"] += 1
+
+            # Charts
+            if shape.has_chart:
+                if chart_has_labels(shape.chart):
+                    slide_counts["charts_with_labels"] += 1
+                else:
+                    slide_counts["charts_without_labels"] += 1
+
+            # Tables
+            elif shape.has_table:
+                slide_counts["tables"] += 1
+
+            # Images
+            elif shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                slide_counts["images"] += 1
+
+            # Text boxes
+            elif shape.has_text_frame:
+                slide_counts["textboxes"] += 1
+
+        # Update totals
+        for key in totals:
+            totals[key] += slide_counts[key]
+
+        slide_features.append(slide_counts)
+
+    return slide_features, totals
+
+
+def main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, OUTPUT_MD)
+
+    pptx_files = sorted(
+        f for f in os.listdir(PPTX_DIR) if f.lower().endswith(".pptx")
+    )
+
+    with open(output_path, "w", encoding="utf-8") as md:
+        md.write("# PPTX Object Feature Extraction\n\n")
+
+        for idx, pptx_file in enumerate(pptx_files, start=1):
+            pptx_path = os.path.join(PPTX_DIR, pptx_file)
+
+            slide_data, totals = extract_object_features(pptx_path)
+
+            md.write(f"## {idx}. {pptx_file}\n\n")
+            md.write(f"- **Total Slides:** {len(slide_data)}\n")
+            md.write(f"- **Total Objects:** {totals['objects']}\n")
+            md.write(f"- **Images:** {totals['images']}\n")
+            md.write(f"- **Tables:** {totals['tables']}\n")
+            md.write(f"- **Text Boxes:** {totals['textboxes']}\n")
+            md.write(f"- **Charts with Labels:** {totals['charts_with_labels']}\n")
+            md.write(f"- **Charts without Labels:** {totals['charts_without_labels']}\n\n")
+
+            md.write("| Slide | Objects | Images | Tables | Text Boxes | Charts (Label) | Charts (No Label) |\n")
+            md.write("|-------|---------|--------|--------|------------|----------------|-------------------|\n")
+
+            for s in slide_data:
+                md.write(
+                    f"| {s['slide']} | {s['objects']} | {s['images']} | "
+                    f"{s['tables']} | {s['textboxes']} | "
+                    f"{s['charts_with_labels']} | {s['charts_without_labels']} |\n"
+                )
+
+            md.write("\n---\n\n")
+
+    print("Feature extraction completed successfully.")
     print(f"Markdown file saved at:\n{output_path}")
 
 
