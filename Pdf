@@ -1,0 +1,82 @@
+import os
+import pdfplumber
+
+INPUT_DIR = "ppt_dataset"
+OUTPUT_FILE = "ppt_auto_layout_output.txt"
+
+def group_words_into_blocks(words, y_threshold=12):
+    """
+    Groups words into horizontal blocks based on vertical proximity
+    """
+    words = sorted(words, key=lambda w: (w["top"], w["x0"]))
+    blocks = []
+    current_block = []
+
+    for word in words:
+        if not current_block:
+            current_block.append(word)
+            continue
+
+        prev = current_block[-1]
+        if abs(word["top"] - prev["top"]) <= y_threshold:
+            current_block.append(word)
+        else:
+            blocks.append(current_block)
+            current_block = [word]
+
+    if current_block:
+        blocks.append(current_block)
+
+    return blocks
+
+
+def merge_blocks(blocks, x_gap=50):
+    """
+    Merge nearby horizontal blocks into semantic regions
+    """
+    merged = []
+
+    for block in blocks:
+        block = sorted(block, key=lambda w: w["x0"])
+        text = " ".join(w["text"] for w in block)
+
+        x0 = min(w["x0"] for w in block)
+        top = min(w["top"] for w in block)
+
+        merged.append({
+            "text": text,
+            "x0": x0,
+            "top": top
+        })
+
+    # sort reading order
+    merged = sorted(merged, key=lambda b: (b["top"], b["x0"]))
+    return merged
+
+
+with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
+    for file in os.listdir(INPUT_DIR):
+        if not file.lower().endswith(".pdf"):
+            continue
+
+        with pdfplumber.open(os.path.join(INPUT_DIR, file)) as pdf:
+            for page_no, page in enumerate(pdf.pages, start=1):
+                words = page.extract_words(
+                    use_text_flow=True,
+                    keep_blank_chars=False
+                )
+
+                blocks = group_words_into_blocks(words)
+                regions = merge_blocks(blocks)
+
+                out.write("=" * 60 + "\n")
+                out.write(f"FILE: {file}\n")
+                out.write(f"SLIDE: {page_no}\n")
+                out.write("=" * 60 + "\n\n")
+
+                for region in regions:
+                    out.write(region["text"] + "\n\n")
+
+                out.write("\n")
+
+print("✅ DONE: Auto-layout text extraction saved to txt file.")
