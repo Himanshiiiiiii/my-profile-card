@@ -1,0 +1,94 @@
+import pdfplumber
+import numpy as np
+from sklearn.cluster import DBSCAN
+from collections import defaultdict, Counter
+
+PDF_FILE = "A.pdf"
+
+def cluster_blocks(words, eps=25):
+    """Cluster words into layout blocks"""
+    X = [
+        [(w["x0"] + w["x1"]) / 2, (w["top"] + w["bottom"]) / 2]
+        for w in words
+    ]
+
+    labels = DBSCAN(eps=eps, min_samples=3).fit(X).labels_
+
+    blocks = defaultdict(list)
+    for label, word in zip(labels, words):
+        if label != -1:
+            blocks[label].append(word)
+
+    return blocks.values()
+
+def is_table_block(block):
+    """Heuristic to detect table-like blocks"""
+    xs = [round(w["x0"], -1) for w in block]
+    ys = [round(w["top"], -1) for w in block]
+
+    return (
+        len(set(xs)) >= 3 and
+        len(set(ys)) >= 3 and
+        len(block) >= 10
+    )
+
+def cluster_rows(words):
+    Y = np.array([[w["top"]] for w in words])
+    labels = DBSCAN(eps=5, min_samples=1).fit(Y).labels_
+    rows = defaultdict(list)
+    for w, r in zip(words, labels):
+        rows[r].append(w)
+    return rows
+
+def cluster_columns(words):
+    X = np.array([[(w["x0"] + w["x1"]) / 2] for w in words])
+    labels = DBSCAN(eps=20, min_samples=1).fit(X).labels_
+    cols = defaultdict(list)
+    for w, c in zip(words, labels):
+        cols[c].append(w)
+    return labels
+
+def build_table(words):
+    row_labels = DBSCAN(eps=5, min_samples=1).fit(
+        np.array([[w["top"]] for w in words])
+    ).labels_
+
+    col_labels = DBSCAN(eps=20, min_samples=1).fit(
+        np.array([[(w["x0"] + w["x1"]) / 2] for w in words])
+    ).labels_
+
+    cells = defaultdict(list)
+    for w, r, c in zip(words, row_labels, col_labels):
+        cells[(r, c)].append(w["text"])
+
+    rows = sorted(set(row_labels))
+    cols = sorted(set(col_labels))
+
+    table = []
+    for r in rows:
+        row = []
+        for c in cols:
+            row.append(" ".join(cells.get((r, c), [])))
+        table.append(row)
+
+    return table
+
+# ---------------- MAIN ---------------- #
+
+with pdfplumber.open(PDF_FILE) as pdf:
+    for page_no, page in enumerate(pdf.pages):
+        words = page.extract_words()
+        if not words:
+            continue
+
+        blocks = cluster_blocks(words)
+
+        for block_no, block in enumerate(blocks):
+            if not is_table_block(block):
+                continue
+
+            table = build_table(block)
+
+            print(f"\n📄 File: {PDF_FILE} | Page: {page_no + 1} | Table: {block_no + 1}")
+            for row in table:
+                print(" | ".join(cell.strip() for cell in row))
